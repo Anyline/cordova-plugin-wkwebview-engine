@@ -42,6 +42,8 @@
 @property (nonatomic, strong, readwrite) id <WKUIDelegate> uiDelegate;
 @property (nonatomic, weak) id <WKScriptMessageHandler> weakScriptMessageHandler;
 
+
+@property (nonatomic, strong, readwrite) NSURL * recoveryURL;
 @end
 
 // see forwardingTargetForSelector: selector comment for the reason for this pragma
@@ -140,7 +142,7 @@ static void * KVOContext = &KVOContext;
 
 - (void)addURLObserver {
     if(!IsAtLeastiOSVersion(@"9.0")){
-        [self.webView addObserver:self forKeyPath:@"URL" options:0 context:KVOContext];
+        [self.webView addObserver:self forKeyPath:@"URL" options:NSKeyValueObservingOptionNew context:NULL];
     }
 }
 
@@ -398,9 +400,8 @@ static void * KVOContext = &KVOContext;
     }
 }
 
-- (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView
-{
-    [webView reload];
+- (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView {
+    [(WKWebView*)self.engineWebView loadRequest:[NSURLRequest requestWithURL:self.recoveryURL]];
 }
 
 - (BOOL)defaultResourcePolicyForURL:(NSURL*)url
@@ -417,7 +418,11 @@ static void * KVOContext = &KVOContext;
 {
     NSURL* url = [navigationAction.request URL];
     CDVViewController* vc = (CDVViewController*)self.viewController;
-
+    
+    if(!self.recoveryURL) {
+        self.recoveryURL = url;
+    }
+    
     /*
      * Give plugins the chance to handle the url
      */
